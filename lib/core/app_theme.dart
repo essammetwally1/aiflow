@@ -9,11 +9,12 @@ class AppTheme {
   static const Color red = Color(0xFFFF5659);
   static const Color green = Colors.green;
   static const Color white = Colors.white;
+  static const Color blue = Colors.blue;
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: false,
     appBarTheme: const AppBarTheme(
-      backgroundColor: white,
+      backgroundColor: backgroundLight,
       foregroundColor: primary,
       centerTitle: true,
       titleTextStyle: TextStyle(

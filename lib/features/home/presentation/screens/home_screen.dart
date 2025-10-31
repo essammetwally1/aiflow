@@ -1,6 +1,12 @@
-import 'package:aiflow/core/constants.dart';
-import 'package:aiflow/core/widgets/custom_elevated_button.dart';
+// lib/features/home/presentation/screens/home_screen.dart
+import 'package:aiflow/core/widgets/logo_widget.dart';
+import 'package:aiflow/features/auth/data/models/user_model.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:aiflow/features/auth/presentation/provider/auth_provider.dart';
+import 'package:aiflow/core/widgets/custom_elevated_button.dart';
+import 'package:aiflow/core/utils.dart';
+import 'package:aiflow/features/auth/presentation/screens/login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   static const String routeName = '/home';
@@ -8,13 +14,35 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final UserModel? userModel = context.watch<AuthProvider>().user;
+
     return Scaffold(
+      appBar: AppBar(
+        title: Text(userModel?.name ?? 'AiFlow'),
+        actions: [
+          IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await context.read<AuthProvider>().logout();
+              if (context.mounted) {
+                Utils.showSuccessMessage('Logged out');
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  LoginScreen.routeName,
+                  (route) => false,
+                );
+              }
+            },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 50),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            Image.asset(Constants.logoImage),
+            LogoWidget(),
             Row(
               children: [
                 Expanded(
@@ -23,7 +51,7 @@ class HomeScreen extends StatelessWidget {
                     onPressed: () {},
                   ),
                 ),
-                SizedBox(width: 20),
+                const SizedBox(width: 20),
                 Expanded(
                   child: CustomElevatedButton(
                     textElevatedButton: 'Resize Image',
