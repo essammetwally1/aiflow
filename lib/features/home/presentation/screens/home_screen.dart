@@ -1,4 +1,6 @@
 // lib/features/home/presentation/screens/home_screen.dart
+import 'dart:developer';
+
 import 'package:aiflow/core/widgets/logo_widget.dart';
 import 'package:aiflow/features/auth/data/models/user_model.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +17,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final UserModel? userModel = context.watch<AuthProvider>().user;
+    log(userModel.toString());
 
     return Scaffold(
       appBar: AppBar(

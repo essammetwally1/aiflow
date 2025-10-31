@@ -6,6 +6,7 @@ import '../../../auth/domain/usecases/sign_in.dart';
 import '../../../auth/domain/usecases/sign_out.dart';
 import '../../../auth/domain/usecases/sign_up.dart';
 import '../../../auth/domain/usecases/watch_auth_state.dart';
+import '../../../auth/domain/usecases/sign_in_with_google.dart';
 import '../../../../core/services/storage/user_storage_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -14,6 +15,7 @@ class AuthProvider extends ChangeNotifier {
   final SignOut _signOut;
   final WatchAuthState _watch;
   final CurrentUser _current;
+  final SignInWithGoogle _signInWithGoogle;
 
   AuthProvider(
     this._signIn,
@@ -21,6 +23,7 @@ class AuthProvider extends ChangeNotifier {
     this._signOut,
     this._watch,
     this._current,
+    this._signInWithGoogle,
   ) {
     _watch().listen((u) {
       user = u;
@@ -33,8 +36,8 @@ class AuthProvider extends ChangeNotifier {
   bool loading = false;
 
   Future<void> init() async {
-    final bool remember = await UserStorageService.isRememberMeEnabled();
-    final UserModel? existing = _current();
+    final remember = await UserStorageService.isRememberMeEnabled();
+    final existing = _current();
     if (!remember && existing != null) {
       await _signOut();
     } else {
@@ -54,6 +57,23 @@ class AuthProvider extends ChangeNotifier {
     try {
       user = await _signIn(email, password);
       await UserStorageService.setRememberMe(rememberMe);
+      return true;
+    } catch (e) {
+      error = _mapError(e);
+      return false;
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> googleSignIn() async {
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      user = await _signInWithGoogle();
+      await UserStorageService.setRememberMe(true);
       return true;
     } catch (e) {
       error = _mapError(e);
@@ -93,6 +113,10 @@ class AuthProvider extends ChangeNotifier {
 
   String _mapError(Object e) {
     if (e is FirebaseAuthException) {
+      if (e.code == 'canceled' || e.code == 'canceled-by-user') {
+        return 'Google sign-in cancelled.';
+      }
+
       switch (e.code) {
         case 'invalid-credential':
         case 'wrong-password':

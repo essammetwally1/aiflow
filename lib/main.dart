@@ -1,3 +1,4 @@
+import 'package:aiflow/features/auth/domain/usecases/sign_in_with_google.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aiflow/app/app.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
   // DI
   final dataSource = FirebaseAuthDataSourceImpl();
   final repo = AuthRepositoryImpl(dataSource);
+  final signInWithGoogle = SignInWithGoogle(repo);
 
   final signIn = SignIn(repo);
   final signUp = SignUp(repo);
@@ -38,6 +40,7 @@ Future<void> main() async {
               signOut,
               watchAuthState,
               currentUser,
+              signInWithGoogle,
             );
             authProvider.init();
             return authProvider;

@@ -77,6 +77,25 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _googleLogin() async {
+    if (isGoogleLoading) return;
+    setState(() => isGoogleLoading = true);
+    try {
+      final ok = await context.read<AuthProvider>().googleSignIn();
+      if (!mounted) return;
+      if (ok) {
+        Utils.showSuccessMessage('Signed in with Google');
+        Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
+      } else {
+        final msg =
+            context.read<AuthProvider>().error ?? 'Google sign-in failed';
+        Utils.showErrorMessage(msg);
+      }
+    } finally {
+      if (mounted) setState(() => isGoogleLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.watch<SettingsProvider>().isDark;
@@ -213,13 +232,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 const SizedBox(height: 16),
+
                 CustomElevatedButton(
                   isGoogle: true,
                   isLoading: isGoogleLoading,
                   textElevatedButton: 'Continue With Google',
-                  onPressed: () {
-                    Utils.showErrorMessage('Google Sign-in not connected yet.');
-                  },
+                  onPressed: _googleLogin,
                 ),
               ],
             ),

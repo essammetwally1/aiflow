@@ -8,7 +8,6 @@ class FirebaseAuthService {
 
   CollectionReference<Map<String, dynamic>> get _usersCol => FirebaseRefs.users;
 
-  /// Create/Update users/{uid} on register/login
   Future<void> _upsertUserDoc({
     required User user,
     String? overrideName,
@@ -30,7 +29,6 @@ class FirebaseAuthService {
     }
   }
 
-  /// Register → updates displayName → upsert Firestore → returns Firebase User
   Future<User> register({
     required String name,
     required String email,
