@@ -10,6 +10,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Stream<UserModel?> watchAuthState() => _ds.watchAuth();
 
   @override
+  UserModel? currentUser() => _ds.currentUser;
+
+  @override
   Future<UserModel> signIn(String email, String password) =>
       _ds.signIn(email, password);
 
@@ -22,7 +25,4 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signOut() => _ds.signOut();
-
-  @override
-  UserModel? currentUser() => _ds.currentUser;
 }

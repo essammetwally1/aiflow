@@ -52,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => isLoading = true);
     try {
-      final ok = await context.read<AuthProvider>().login(
+      final bool ok = await context.read<AuthProvider>().login(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
         rememberMe: rememberMe,

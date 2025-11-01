@@ -9,11 +9,10 @@ class AppAuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AuthProvider authProvider = context.watch<AuthProvider>();
-    if (authProvider.loading) {
+    final AuthProvider auth = context.watch<AuthProvider>();
+    if (auth.initializing) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
-    return authProvider.user != null ? const HomeScreen() : const LoginScreen();
+    return auth.user != null ? const HomeScreen() : const LoginScreen();
   }
 }

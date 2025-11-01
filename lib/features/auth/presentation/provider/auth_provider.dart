@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/user_model.dart';
@@ -25,15 +26,19 @@ class AuthProvider extends ChangeNotifier {
     this._current,
     this._signInWithGoogle,
   ) {
-    _watch().listen((u) {
+    _sub = _watch().listen((u) {
       user = u;
+      initializing = false;
       notifyListeners();
     });
   }
 
+  StreamSubscription<UserModel?>? _sub;
+
   UserModel? user;
   String? error;
   bool loading = false;
+  bool initializing = true;
 
   Future<void> init() async {
     final remember = await UserStorageService.isRememberMeEnabled();
@@ -42,8 +47,9 @@ class AuthProvider extends ChangeNotifier {
       await _signOut();
     } else {
       user = existing;
-      notifyListeners();
     }
+    initializing = false;
+    notifyListeners();
   }
 
   Future<bool> login({
@@ -58,8 +64,11 @@ class AuthProvider extends ChangeNotifier {
       user = await _signIn(email, password);
       await UserStorageService.setRememberMe(rememberMe);
       return true;
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
       error = _mapError(e);
+      return false;
+    } catch (e) {
+      error = 'Unexpected error: $e';
       return false;
     } finally {
       loading = false;
@@ -75,8 +84,11 @@ class AuthProvider extends ChangeNotifier {
       user = await _signInWithGoogle();
       await UserStorageService.setRememberMe(true);
       return true;
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
       error = _mapError(e);
+      return false;
+    } catch (e) {
+      error = 'Unexpected error: $e';
       return false;
     } finally {
       loading = false;
@@ -95,8 +107,11 @@ class AuthProvider extends ChangeNotifier {
     try {
       user = await _signUp(name, email, password);
       return true;
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
       error = _mapError(e);
+      return false;
+    } catch (e) {
+      error = 'Unexpected error: $e';
       return false;
     } finally {
       loading = false;
@@ -111,33 +126,35 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _mapError(Object e) {
-    if (e is FirebaseAuthException) {
-      if (e.code == 'canceled' || e.code == 'canceled-by-user') {
-        return 'Google sign-in cancelled.';
-      }
-
-      switch (e.code) {
-        case 'invalid-credential':
-        case 'wrong-password':
-        case 'user-not-found':
-          return 'The email or password is incorrect.';
-        case 'invalid-email':
-          return 'Please enter a valid email address.';
-        case 'email-already-in-use':
-          return 'This email is already registered.';
-        case 'weak-password':
-          return 'Password is too weak. Use at least 9 characters.';
-        case 'network-request-failed':
-          return 'Network error. Check your internet connection.';
-        case 'too-many-requests':
-          return 'Too many attempts. Try again later.';
-        default:
-          return e.message ?? 'Authentication error occurred.';
-      }
+  String _mapError(FirebaseAuthException e) {
+    if (e.code == 'canceled' || e.code == 'canceled-by-user') {
+      return 'Google sign-in cancelled.';
     }
-    final msg = e.toString();
-    if (msg.contains('SocketException')) return 'No internet connection.';
-    return 'Unexpected error: $msg';
+    switch (e.code) {
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'The email or password is incorrect.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'email-already-in-use':
+        return 'This email is already registered.';
+      case 'weak-password':
+        return 'Password is too weak. Use at least 9 characters.';
+      case 'network-request-failed':
+        return 'Network error. Check your internet connection.';
+      case 'too-many-requests':
+        return 'Too many attempts. Try again later.';
+      case 'account-exists-with-different-credential':
+        return 'This email is already linked to another sign-in method.';
+      default:
+        return e.message ?? 'Authentication error occurred.';
+    }
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 }

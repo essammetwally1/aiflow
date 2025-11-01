@@ -27,7 +27,6 @@ class HomeScreen extends StatelessWidget {
             tooltip: 'Logout',
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await context.read<AuthProvider>().logout();
               if (context.mounted) {
                 Utils.showSuccessMessage('Logged out');
                 Navigator.pushNamedAndRemoveUntil(
@@ -35,6 +34,7 @@ class HomeScreen extends StatelessWidget {
                   LoginScreen.routeName,
                   (route) => false,
                 );
+                await context.read<AuthProvider>().logout();
               }
             },
           ),
@@ -45,6 +45,7 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
+            Image.network(userModel!.photoUrl),
             LogoWidget(),
             Row(
               children: [

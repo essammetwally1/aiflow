@@ -4,21 +4,19 @@ import 'package:aiflow/features/auth/data/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
+import 'package:google_sign_in/google_sign_in.dart' as gsi;
 
 class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   final FirebaseAuth _auth = FirebaseRefs.auth;
-  final List<String> _identityScopes = <String>['email', 'profile', 'openid'];
 
   CollectionReference<Map<String, dynamic>> get _users => FirebaseRefs.users;
 
   @override
-  Stream<UserModel?> watchAuth() =>
-      _auth.authStateChanges().asyncMap((u) async {
-        if (u == null) return null;
-        await _upsertUser(u);
-        return _toModel(u);
-      });
+  Stream<UserModel?> watchAuth() => _auth.idTokenChanges().asyncMap((u) async {
+    if (u == null) return null;
+    await _upsertUser(u);
+    return _toModel(u);
+  });
 
   @override
   UserModel? get currentUser =>
@@ -36,105 +34,6 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   }
 
   @override
-  Future<UserModel> signInWithGoogle() async {
-    try {
-      UserCredential cred;
-      String derivedName = '';
-
-      if (kIsWeb) {
-        // On Web, keep using Firebase popup/provider (stable & simple).
-        final provider = GoogleAuthProvider()
-          ..setCustomParameters({'prompt': 'select_account'});
-        // Use whichever your firebase_auth exposes (both are fine on web):
-        // cred = await _auth.signInWithPopup(provider);
-        cred = await _auth.signInWithProvider(provider);
-      } else {
-        // ANDROID / iOS: follow the example's platform-interface flow
-
-        // 1) Ensure the platform instance is initialized (like the sample does)
-        await GoogleSignInPlatform.instance
-            .init(const InitParameters())
-            .catchError((_) {
-              /* no-op: allow retry next time */
-            });
-
-        // 2) Interactive sign-in (this shows Google's native UI)
-        final AuthenticationResults results = await GoogleSignInPlatform
-            .instance
-            .authenticate(const AuthenticateParameters());
-
-        final GoogleSignInUserData? gUser = results.user;
-        if (gUser == null) {
-          throw FirebaseAuthException(
-            code: 'canceled-by-user',
-            message: 'Sign-in canceled by user',
-          );
-        }
-
-        derivedName = (gUser.displayName ?? '').trim();
-
-        // 3) Request tokens for basic identity scopes (no contacts needed)
-        final ClientAuthorizationTokenData? tok = await GoogleSignInPlatform
-            .instance
-            .clientAuthorizationTokensForScopes(
-              ClientAuthorizationTokensForScopesParameters(
-                request: AuthorizationRequestDetails(
-                  scopes: _identityScopes,
-                  userId: gUser.id,
-                  email: gUser.email,
-                  promptIfUnauthorized: true,
-                ),
-              ),
-            );
-
-        if (tok == null || (tok.accessToken).isEmpty) {
-          throw FirebaseAuthException(
-            code: 'missing-access-token',
-            message: 'Could not obtain Google access token',
-          );
-        }
-
-        // 4) Build Firebase credential from Google access token
-        final OAuthCredential oauth = GoogleAuthProvider.credential(
-          accessToken:
-              tok.accessToken, // idToken is optional; accessToken is enough
-          // idToken: tok.idToken, // (platform interface does not currently expose this)
-        );
-
-        // 5) Sign in to Firebase
-        cred = await _auth.signInWithCredential(oauth);
-      }
-
-      // 6) Finalize profile + upsert
-      final User u = cred.user!;
-      String name = (u.displayName ?? '').trim();
-      if (name.isEmpty) name = derivedName;
-
-      if (name.isEmpty) {
-        final email = (u.email ?? '').trim();
-        final beforeAt = email.contains('@') ? email.split('@').first : email;
-        name = beforeAt.replaceAll(RegExp(r'[._]+'), ' ').trim();
-        if (name.isEmpty) name = 'User';
-        name = name[0].toUpperCase() + name.substring(1);
-      }
-
-      if ((u.displayName ?? '').trim().isEmpty && name.isNotEmpty) {
-        await u.updateDisplayName(name);
-      }
-
-      await _upsertUser(u, overrideName: name);
-      return _toModel(u);
-    } on FirebaseAuthException {
-      rethrow;
-    } catch (e) {
-      throw FirebaseAuthException(
-        code: 'google-signin-failed',
-        message: 'Google sign-in failed: $e',
-      );
-    }
-  }
-
-  @override
   Future<UserModel> signUp(String name, String email, String password) async {
     final UserCredential cred = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -149,15 +48,86 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   }
 
   @override
+  Future<UserModel> signInWithGoogle() async {
+    try {
+      UserCredential cred;
+      String derivedName = '';
+      String derivedPhoto = '';
+
+      if (kIsWeb) {
+        final provider = GoogleAuthProvider()
+          ..setCustomParameters({'prompt': 'select_account'});
+        cred = await _auth.signInWithProvider(
+          provider,
+        ); // or signInWithPopup(provider)
+      } else {
+        // If your google-services.json already has a Web OAuth client (client_type:3), keep constructor empty.
+        // If you ever get “serverClientId must be provided”, add it below.
+        final g = gsi.GoogleSignIn(
+          // serverClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+        );
+
+        final account = await g.signIn();
+        if (account == null) {
+          throw FirebaseAuthException(
+            code: 'canceled-by-user',
+            message: 'Sign-in canceled by user',
+          );
+        }
+
+        derivedName = (account.displayName ?? '').trim();
+        derivedPhoto = (account.photoUrl ?? '').trim();
+
+        final auth = await account.authentication;
+        final oauth = GoogleAuthProvider.credential(
+          idToken: auth.idToken,
+          accessToken: auth.accessToken,
+        );
+
+        cred = await _auth.signInWithCredential(oauth);
+      }
+
+      final u = cred.user!;
+      var name = (u.displayName ?? '').trim();
+      if (name.isEmpty) name = derivedName;
+      if (name.isEmpty) {
+        final email = (u.email ?? '').trim();
+        final beforeAt = email.contains('@') ? email.split('@').first : email;
+        name = beforeAt.replaceAll(RegExp(r'[._]+'), ' ').trim();
+        if (name.isEmpty) name = 'User';
+        name = name[0].toUpperCase() + name.substring(1);
+      }
+
+      final photoUrl = (u.photoURL ?? '').trim().isNotEmpty
+          ? u.photoURL!.trim()
+          : derivedPhoto;
+
+      if ((u.displayName ?? '').trim().isEmpty && name.isNotEmpty) {
+        await u.updateDisplayName(name);
+      }
+
+      await _upsertUser(u, overrideName: name, overridePhoto: photoUrl);
+      return _toModel(u);
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      throw FirebaseAuthException(
+        code: 'google-signin-failed',
+        message: 'Google sign-in failed: $e',
+      );
+    }
+  }
+
+  @override
   Future<void> signOut() async {
     if (!kIsWeb) {
       try {
-        await GoogleSignInPlatform.instance.disconnect(
-          const DisconnectParams(),
-        );
-      } catch (_) {
-        // ignore: user might not be connected at the platform level
-      }
+        final g = gsi.GoogleSignIn();
+        if (await g.isSignedIn()) {
+          await g.signOut();
+          // await g.disconnect();
+        }
+      } catch (_) {}
     }
     await _auth.signOut();
   }
@@ -167,23 +137,32 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     id: u.uid,
     name: (u.displayName ?? '').trim().isEmpty ? 'User' : u.displayName!.trim(),
     email: u.email ?? '',
+    photoUrl: u.photoURL ?? '',
   );
 
-  Future<void> _upsertUser(User u, {String? overrideName}) async {
+  Future<void> _upsertUser(
+    User u, {
+    String? overrideName,
+    String? overridePhoto,
+  }) async {
     final name = (overrideName ?? u.displayName ?? '').trim();
-    final data = {
-      'id': u.uid,
-      'name': name.isEmpty ? 'User' : name,
-      'email': u.email ?? '',
-      'photoUrl': u.photoURL ?? '',
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+    final photo = (overridePhoto ?? u.photoURL ?? '').trim();
 
     final doc = _users.doc(u.uid);
     final snap = await doc.get();
+
+    final data = <String, dynamic>{
+      'id': u.uid,
+      'name': name.isEmpty ? 'User' : name,
+      'email': u.email ?? '',
+      'photoUrl': photo,
+    };
+
     if (!snap.exists) {
+      // First-time create: set createdAt once
       data['createdAt'] = FieldValue.serverTimestamp();
     }
+
     await doc.set(data, SetOptions(merge: true));
   }
 }
