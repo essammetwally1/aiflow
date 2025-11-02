@@ -1,8 +1,12 @@
-import 'package:aiflow/core/app_theme.dart';
-import 'package:aiflow/core/utils.dart';
-import 'package:aiflow/features/auth/data/models/user_model.dart';
+// lib/features/profile/presentation/widgets/app_drawer.dart
+import 'dart:math' as math;
+import 'package:aiflow/core/domain/entities/user.dart';
+import 'package:aiflow/core/theme/app_theme.dart';
+import 'package:aiflow/core/utils/utils.dart';
+import 'package:aiflow/core/widgets/custom_text_form_field.dart';
 import 'package:aiflow/features/auth/presentation/provider/auth_provider.dart';
 import 'package:aiflow/features/auth/presentation/screens/login_screen.dart';
+import 'package:aiflow/features/profile/presentation/provider/profile_provider.dart';
 import 'package:aiflow/shared/provider/setting_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -10,123 +14,296 @@ import 'package:provider/provider.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
-  Future<void> _showRenameDialog(BuildContext context) async {
-    final auth = context.read<AuthProvider>();
-    final currentName = auth.user?.name ?? '';
-    final controller = TextEditingController(text: currentName);
 
-    await showDialog(
+  String _initials(String? name) {
+    if (name == null || name.trim().isEmpty) return '?';
+    final p = name.trim().split(RegExp(r'\s+'));
+    final a = p.first.isNotEmpty ? p.first[0] : '';
+    final b = p.length > 1 && p.last.isNotEmpty ? p.last[0] : '';
+    final r = (a + b).toUpperCase();
+    return r.isEmpty ? '?' : r;
+  }
+
+  Future<void> _showRenameDialog(
+    BuildContext context,
+    String current,
+    bool isDark,
+    TextTheme textTheme,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final controller = TextEditingController(text: current);
+    bool isLoading = false;
+
+    await showDialog<bool>(
       context: context,
+      barrierDismissible: !isLoading,
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: Theme.of(ctx).brightness == Brightness.dark
-              ? AppTheme.backgroundDark
-              : AppTheme.white,
-          title: const Text('Rename user name'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Full name',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+        return StatefulBuilder(
+          builder: (ctx, setState) => AlertDialog(
+            backgroundColor: isDark
+                ? AppTheme.backgroundDark
+                : AppTheme.backgroundLight,
+            title: Text('Rename user name', style: textTheme.titleMedium),
+            content: AbsorbPointer(
+              absorbing: isLoading,
+              child: Form(
+                key: formKey,
+                child: CustomTextFormField(
+                  controller: controller,
+                  isDark: isDark,
+                  label: 'New name',
+                  validator: (v) {
+                    final val = (v ?? '').trim();
+                    if (val.isEmpty) return 'Enter a name';
+                    if (val == current.trim()) return 'Choose a different name';
+                    return null;
+                  },
                 ),
               ),
-              onPressed: () async {
-                final newName = controller.text.trim();
-                if (newName.isEmpty) return;
-                try {
-                  // await auth.updateUserName(
-                  //   newName,
-                  // ); // implement in AuthProvider
-                  if (context.mounted) {
-                    Utils.showSuccessMessage('Name updated');
-                    Navigator.pop(ctx);
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    Utils.showErrorMessage('Failed to update name: $e');
-                  }
-                }
-              },
-              child: const Text(
-                'Save',
-                style: TextStyle(color: AppTheme.white),
-              ),
             ),
-          ],
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(ctx, false),
+                child: const Text('Cancel', style: TextStyle(fontSize: 14)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        setState(() => isLoading = true);
+
+                        final newName = controller.text.trim();
+
+                        try {
+                          // Prefer the confirm flow if you added it; else fall back to rename().
+                          bool ok = false;
+                          final provider = context.read<ProfileProvider>();
+                          // just a ref
+
+                          // If you implemented renameAndConfirm(newName)
+                          ok = await provider.renameAndConfirm(newName);
+
+                          if (ok) {
+                            Utils.showSuccessMessage('Name updated');
+                            if (ctx.mounted) Navigator.pop(ctx, true);
+                          } else {
+                            final st = provider.state;
+                            Utils.showErrorMessage(
+                              st.message ?? 'Rename failed',
+                            );
+                            setState(() => isLoading = false);
+                          }
+                        } catch (e) {
+                          Utils.showErrorMessage('Something went wrong');
+                          setState(() => isLoading = false);
+                        }
+                      },
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.white,
+                          ),
+                        ),
+                      )
+                    : const Text(
+                        'Save',
+                        style: TextStyle(color: AppTheme.white, fontSize: 14),
+                      ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  Future<void> _handleResetPassword(BuildContext context) async {
-    final auth = context.read<AuthProvider>();
-    final email = auth.user?.email;
-    if (email == null || email.isEmpty) {
-      Utils.showErrorMessage('No email linked to this account.');
-      return;
-    }
-    try {
-      // await auth.sendPasswordResetEmail(email); // implement in AuthProvider
-      Utils.showSuccessMessage('Reset link sent to $email');
-    } catch (e) {
-      Utils.showErrorMessage('Failed to send reset email: $e');
-    }
-  }
+  Future<void> _showChangePasswordDialog(
+    BuildContext context,
+    bool isDark,
+    TextTheme textTheme,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final oldC = TextEditingController();
+    final newC = TextEditingController();
+    final confirmC = TextEditingController();
 
-  String _initials(String? name) {
-    if (name == null || name.trim().isEmpty) return '?';
-    final parts = name.trim().split(RegExp(r'\s+'));
-    final first = parts.isNotEmpty ? parts.first.characters.first : '';
-    final last = parts.length > 1 ? parts.last.characters.first : '';
-    final res = (first + last).toUpperCase();
-    return res.isEmpty ? '?' : res;
+    bool obscureOld = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+    bool isLoading = false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible:
+          !isLoading, // user can still tap outside when not saving
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setState) => AlertDialog(
+            backgroundColor: isDark
+                ? AppTheme.backgroundDark
+                : AppTheme.backgroundLight,
+            title: const Text('Change password'),
+            content: AbsorbPointer(
+              // disable fields while loading
+              absorbing: isLoading,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CustomTextFormField(
+                      controller: oldC,
+                      isDark: isDark,
+                      label: 'Old password',
+                      isPassword: obscureOld,
+                      onPressed: () => setState(() => obscureOld = !obscureOld),
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? 'Enter old password'
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextFormField(
+                      controller: newC,
+                      isDark: isDark,
+                      label: 'New password',
+                      isPassword: obscureNew,
+                      onPressed: () => setState(() => obscureNew = !obscureNew),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Enter new password';
+                        if (v.length < 9) return 'Use at least 9 characters';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextFormField(
+                      controller: confirmC,
+                      isDark: isDark,
+                      label: 'Confirm new password',
+                      isPassword: obscureConfirm,
+                      onPressed: () =>
+                          setState(() => obscureConfirm = !obscureConfirm),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return 'Confirm new password';
+                        }
+                        if (v != newC.text) return 'Passwords do not match';
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(ctx, false),
+                child: const Text('Cancel', style: TextStyle(fontSize: 14)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        setState(() => isLoading = true);
+                        try {
+                          final err = await context
+                              .read<ProfileProvider>()
+                              .changePassword(
+                                oldPassword: oldC.text.trim(),
+                                newPassword: newC.text.trim(),
+                              );
+                          if (err != null) {
+                            Utils.showErrorMessage(err);
+                            setState(() => isLoading = false);
+                          } else {
+                            Utils.showSuccessMessage('Password updated');
+                            if (ctx.mounted) Navigator.pop(ctx, true);
+                          }
+                        } catch (e) {
+                          Utils.showErrorMessage('Something went wrong');
+                          setState(() => isLoading = false);
+                        }
+                      },
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.white,
+                          ),
+                        ),
+                      )
+                    : const Text(
+                        'Update',
+                        style: TextStyle(color: AppTheme.white, fontSize: 14),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (result == true && context.mounted) {
+      // provider already notified; nothing else needed
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final UserModel? user = context.watch<AuthProvider>().user;
+    final User? profile = context.watch<ProfileProvider>().state.profile;
+    final bool isDark = context.watch<SettingsProvider>().isDark;
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final String name = profile?.name ?? 'Guest';
+    final String imageUrl = profile?.photoUrl ?? '';
 
-    final name = user?.name ?? 'Guest';
-    final imageUrl = user?.photoUrl ?? '';
+    final w = MediaQuery.sizeOf(context).width;
+    final drawerW = w < 480 ? w * 0.85 : math.min(380.0, w * 0.5);
 
     Future<void> logout() async {
-      if (context.mounted) Utils.showSuccessMessage('Logged out');
+      Utils.showSuccessMessage('Logged out');
       if (context.mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
           LoginScreen.routeName,
-          (route) => false,
+          (r) => false,
         );
       }
       await context.read<AuthProvider>().logout();
     }
 
     return Drawer(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark
+          ? AppTheme.backgroundDark
+          : AppTheme.backgroundLight,
+      width: drawerW,
       child: Column(
         children: [
+          // header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 30, 16, 20),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.08),
-              border: Border(
-                bottom: BorderSide(color: AppTheme.gray.withValues(alpha: 0.2)),
-              ),
+              color: AppTheme.primary.withValues(alpha: .5),
             ),
             child: Row(
               children: [
@@ -134,10 +311,7 @@ class AppDrawer extends StatelessWidget {
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppTheme.primary.withValues(alpha: .9),
-                      width: 2,
-                    ),
+                    border: Border.all(color: AppTheme.white, width: 2),
                   ),
                   child: CircleAvatar(
                     radius: 32,
@@ -146,14 +320,7 @@ class AppDrawer extends StatelessWidget {
                         ? CachedNetworkImageProvider(imageUrl)
                         : null,
                     child: imageUrl.isEmpty
-                        ? Text(
-                            _initials(name),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: AppTheme.black,
-                            ),
-                          )
+                        ? Text(_initials(name), style: textTheme.titleMedium)
                         : null,
                   ),
                 ),
@@ -163,82 +330,69 @@ class AppDrawer extends StatelessWidget {
                     name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.black,
-                    ),
+                    style: textTheme.titleLarge,
                   ),
                 ),
               ],
             ),
           ),
 
+          // body
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                // ── Profile (expandable)
-                Theme(
-                  // shrink divider/ink to match your theme
-                  data: Theme.of(
-                    context,
-                  ).copyWith(dividerColor: Colors.transparent),
-                  child: ExpansionTile(
-                    leading: const Icon(Icons.person, color: AppTheme.primary),
-                    title: Text('Profile', style: textTheme.titleMedium),
-                    collapsedBackgroundColor: AppTheme.primary.withValues(
-                      alpha: 0.04,
-                    ),
-                    backgroundColor: AppTheme.primary.withValues(alpha: 0.06),
-                    childrenPadding: const EdgeInsets.only(
-                      left: 72,
-                      right: 12,
-                      bottom: 8,
-                    ),
-                    children: [
-                      ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(
-                          Icons.drive_file_rename_outline,
-                          color: AppTheme.primary,
-                        ),
-                        title: const Text(
-                          'Rename user name',
-                          style: TextStyle(color: AppTheme.black),
-                        ),
-                        onTap: () => _showRenameDialog(context),
-                      ),
-                      ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(
-                          Icons.lock_reset,
-                          color: AppTheme.primary,
-                        ),
-                        title: const Text(
-                          'Reset password',
-                          style: TextStyle(color: AppTheme.black),
-                        ),
-                        onTap: () => _handleResetPassword(context),
-                      ),
-                    ],
+                ExpansionTile(
+                  leading: const Icon(Icons.person, color: AppTheme.primary),
+                  title: Text('Profile', style: textTheme.titleMedium),
+                  childrenPadding: const EdgeInsets.only(
+                    left: 72,
+                    right: 12,
+                    bottom: 8,
                   ),
+                  children: [
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.drive_file_rename_outline,
+                        color: AppTheme.primary,
+                      ),
+                      title: Text(
+                        'Rename user name',
+                        style: textTheme.titleSmall,
+                      ),
+                      onTap: () =>
+                          _showRenameDialog(context, name, isDark, textTheme),
+                    ),
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.password,
+                        color: AppTheme.primary,
+                      ),
+                      title: Text(
+                        'Change password',
+                        style: textTheme.titleSmall,
+                      ),
+
+                      onTap: () =>
+                          _showChangePasswordDialog(context, isDark, textTheme),
+                    ),
+                  ],
                 ),
 
-                // ── Settings + Theme switch
+                // Theme toggle (drawer only)
                 Builder(
-                  builder: (context) {
-                    final isDark = context
-                        .watch<SettingsProvider>()
-                        .isDark; // adjust to your provider
+                  builder: (ctx) {
+                    final isDark = ctx.watch<SettingsProvider>().isDark;
                     return ListTile(
                       leading: const Icon(
                         Icons.settings,
                         color: AppTheme.primary,
                       ),
-                      title: Text('Settings', style: textTheme.titleMedium),
+                      title: Text('Dark mode', style: textTheme.titleMedium),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -251,14 +405,9 @@ class AppDrawer extends StatelessWidget {
                             value: isDark,
                             activeThumbColor: AppTheme.primary,
                             onChanged: (_) =>
-                                context.read<SettingsProvider>().toggleTheme(),
+                                ctx.read<SettingsProvider>().toggleTheme(),
                           ),
                         ],
-                      ),
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Toggle theme using the switch →'),
-                        ),
                       ),
                     );
                   },
@@ -266,7 +415,9 @@ class AppDrawer extends StatelessWidget {
               ],
             ),
           ),
+          // Google-only account (no password provider)
 
+          // logout
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),

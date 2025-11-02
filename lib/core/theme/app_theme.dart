@@ -84,12 +84,12 @@ class AppTheme {
       headlineSmall: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.bold,
-        color: white,
+        color: black,
       ),
       titleLarge: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w500,
-        color: white,
+        color: black,
       ),
       titleMedium: TextStyle(
         fontSize: 16,
@@ -98,8 +98,9 @@ class AppTheme {
       ),
       titleSmall: TextStyle(
         fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: white,
+        fontWeight: FontWeight.bold,
+
+        color: black,
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -202,7 +203,7 @@ class AppTheme {
       ),
       titleSmall: TextStyle(
         fontSize: 14,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.bold,
         color: white,
       ),
     ),

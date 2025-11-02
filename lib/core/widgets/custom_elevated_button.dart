@@ -1,4 +1,4 @@
-import 'package:aiflow/core/app_theme.dart' show AppTheme;
+import 'package:aiflow/core/theme/app_theme.dart' show AppTheme;
 import 'package:flutter/material.dart';
 
 class CustomElevatedButton extends StatelessWidget {
@@ -20,6 +20,9 @@ class CustomElevatedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final TextStyle style =
+        textStyle ??
+        TextTheme.of(context).titleLarge!.copyWith(color: AppTheme.white);
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
@@ -34,24 +37,17 @@ class CustomElevatedButton extends StatelessWidget {
               children: [
                 Text(
                   'G',
-                  style:
-                      textStyle ??
-                      TextTheme.of(context).titleLarge!.copyWith(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: style.copyWith(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.white,
+                  ),
                 ),
                 SizedBox(width: 10),
-                Text(
-                  textElevatedButton,
-                  style: textStyle ?? TextTheme.of(context).titleLarge,
-                ),
+                Text(textElevatedButton, style: style),
               ],
             )
-          : Text(
-              textElevatedButton,
-              style: textStyle ?? TextTheme.of(context).titleLarge,
-            ),
+          : Text(textElevatedButton, style: style),
     );
   }
 }

@@ -1,9 +1,10 @@
-import 'package:aiflow/features/profile/presentation/widgets/app_drawer.dart';
+// lib/features/home/presentation/pages/home_screen.dart
+import 'package:aiflow/features/profile/presentation/widgets/profile_drawer_provider.dart';
+import 'package:aiflow/features/auth/presentation/provider/auth_provider.dart';
+import 'package:aiflow/core/widgets/custom_elevated_button.dart';
 import 'package:aiflow/shared/provider/setting_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:aiflow/features/auth/presentation/provider/auth_provider.dart';
-import 'package:aiflow/core/widgets/custom_elevated_button.dart';
 
 class HomeScreen extends StatelessWidget {
   static const String routeName = '/home';
@@ -11,36 +12,37 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userModel = context.watch<AuthProvider>().user;
-    final isDark = context.watch<SettingsProvider>().isDark;
+    final user = context.watch<AuthProvider>().user;
+    final bool isDark = context.watch<SettingsProvider>().isDark;
 
     return Scaffold(
       appBar: AppBar(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(50),
-          child: Image.asset(
-            isDark ? 'assets/logodark.png' : 'assets/logolight.png',
-            fit: BoxFit.contain,
-            width: 30,
-            height: 30,
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(50),
+            child: Image.asset(
+              isDark ? 'assets/logodark.png' : 'assets/logolight.png',
+            ),
           ),
         ),
-
-        title: Text('AiFlow'),
+        title: const Text('AiFlow'),
         actions: [
           Builder(
-            builder: (context) => IconButton(
+            builder: (ctx) => IconButton(
               icon: const Icon(Icons.settings_suggest, size: 30),
               tooltip: 'Open settings',
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
+              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
             ),
           ),
         ],
       ),
-      endDrawer: AppDrawer(),
+
+      endDrawer: const ProfileDrawerProvider(),
+
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 50),
-        child: userModel == null
+        child: user == null
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,

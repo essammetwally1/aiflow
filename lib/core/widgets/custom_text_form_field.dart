@@ -1,4 +1,4 @@
-import 'package:aiflow/core/app_theme.dart';
+import 'package:aiflow/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 
@@ -60,6 +60,9 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
       ).textTheme.titleLarge!.copyWith(color: AppTheme.primary),
       decoration: InputDecoration(
         labelText: widget.label,
+        labelStyle: Theme.of(
+          context,
+        ).textTheme.titleSmall!.copyWith(color: AppTheme.primary),
 
         hintText: widget.hintText,
         contentPadding: EdgeInsets.all(16),

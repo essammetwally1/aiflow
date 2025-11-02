@@ -2,7 +2,7 @@ import 'package:aiflow/app/app_auth_gate.dart';
 import 'package:aiflow/features/auth/presentation/screens/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:aiflow/core/app_theme.dart';
+import 'package:aiflow/core/theme/app_theme.dart';
 import 'package:aiflow/shared/provider/setting_provider.dart';
 import 'package:aiflow/features/home/presentation/screens/home_screen.dart';
 import 'package:aiflow/features/auth/presentation/screens/login_screen.dart';

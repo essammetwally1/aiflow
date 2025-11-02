@@ -1,5 +1,5 @@
-import 'package:aiflow/core/app_theme.dart';
-import 'package:aiflow/core/utils.dart';
+import 'package:aiflow/core/theme/app_theme.dart';
+import 'package:aiflow/core/utils/utils.dart';
 import 'package:aiflow/core/widgets/custom_text_form_field.dart';
 import 'package:aiflow/core/widgets/logo_widget.dart';
 import 'package:aiflow/features/auth/presentation/provider/auth_provider.dart';

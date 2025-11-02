@@ -1,5 +1,5 @@
-// lib/features/auth/data/models/user_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:aiflow/core/domain/entities/user.dart' as domain;
 
 class UserModel {
   final String id;
@@ -39,23 +39,22 @@ class UserModel {
     'name': name,
     'email': email,
     'photoUrl': photoUrl,
-    // Do NOT set createdAt here on every write; upsert will handle it.
     if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
   };
 
-  UserModel copyWith({
-    String? id,
-    String? name,
-    String? email,
-    String? photoUrl,
-    DateTime? createdAt,
-  }) {
-    return UserModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      email: email ?? this.email,
-      photoUrl: photoUrl ?? this.photoUrl,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
+  domain.User toDomain() => domain.User(
+    id: id,
+    name: name,
+    email: email,
+    photoUrl: photoUrl,
+    createdAt: createdAt,
+  );
+
+  static UserModel fromDomain(domain.User u) => UserModel(
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    photoUrl: u.photoUrl,
+    createdAt: u.createdAt,
+  );
 }

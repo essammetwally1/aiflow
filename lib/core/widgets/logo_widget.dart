@@ -1,4 +1,4 @@
-import 'package:aiflow/core/app_theme.dart';
+import 'package:aiflow/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class LogoWidget extends StatelessWidget {
