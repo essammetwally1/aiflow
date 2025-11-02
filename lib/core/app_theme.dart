@@ -12,7 +12,7 @@ class AppTheme {
   static const Color blue = Colors.blue;
 
   static ThemeData lightTheme = ThemeData(
-    useMaterial3: false,
+    // useMaterial3: false,
     appBarTheme: const AppBarTheme(
       backgroundColor: backgroundLight,
       foregroundColor: primary,
@@ -94,7 +94,7 @@ class AppTheme {
       titleMedium: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
-        color: primary,
+        color: black,
       ),
       titleSmall: TextStyle(
         fontSize: 14,
@@ -116,7 +116,7 @@ class AppTheme {
   );
 
   static ThemeData darkTheme = ThemeData(
-    useMaterial3: false,
+    // useMaterial3: false,
     appBarTheme: const AppBarTheme(
       backgroundColor: backgroundDark,
       foregroundColor: primary,
