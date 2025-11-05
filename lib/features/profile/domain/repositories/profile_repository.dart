@@ -10,4 +10,6 @@ abstract class ProfileRepository {
     required String oldPassword,
     required String newPassword,
   });
+  Future<Result<ProfileFailure, void>> setPhotoUrl(String url);
+  Future<Result<ProfileFailure, void>> clearPhotoUrl();
 }

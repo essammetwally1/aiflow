@@ -12,10 +12,16 @@ import 'package:aiflow/features/auth/domain/usecases/sign_out.dart';
 import 'package:aiflow/features/auth/domain/usecases/watch_auth_state.dart';
 import 'package:aiflow/features/auth/domain/usecases/current_user.dart';
 import 'package:aiflow/features/auth/presentation/provider/auth_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseInitializer.init();
+  await Supabase.initialize(
+    url: 'https://fiqzbqwxfhpktphpyuxw.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpcXpicXd4Zmhwa3RwaHB5dXh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNjc3MDcsImV4cCI6MjA3Nzg0MzcwN30.rJCTsjOff6bMgwVvJb6Z7DNJrEDiKFsn2QbrYlT-qBg',
+  );
 
   // DI
   final dataSource = FirebaseAuthDataSourceImpl();

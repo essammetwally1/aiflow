@@ -6,7 +6,9 @@ import 'package:aiflow/core/utils/utils.dart';
 import 'package:aiflow/core/widgets/custom_text_form_field.dart';
 import 'package:aiflow/features/auth/presentation/provider/auth_provider.dart';
 import 'package:aiflow/features/auth/presentation/screens/login_screen.dart';
+import 'package:aiflow/features/profile/presentation/controllers/profile_state.dart';
 import 'package:aiflow/features/profile/presentation/provider/profile_provider.dart';
+import 'package:aiflow/features/profile/presentation/widgets/avatar_picker_sheet.dart';
 import 'package:aiflow/shared/provider/setting_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -14,15 +16,6 @@ import 'package:provider/provider.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
-
-  String _initials(String? name) {
-    if (name == null || name.trim().isEmpty) return '?';
-    final p = name.trim().split(RegExp(r'\s+'));
-    final a = p.first.isNotEmpty ? p.first[0] : '';
-    final b = p.length > 1 && p.last.isNotEmpty ? p.last[0] : '';
-    final r = (a + b).toUpperCase();
-    return r.isEmpty ? '?' : r;
-  }
 
   Future<void> _showRenameDialog(
     BuildContext context,
@@ -82,14 +75,9 @@ class AppDrawer extends StatelessWidget {
                         final newName = controller.text.trim();
 
                         try {
-                          // Prefer the confirm flow if you added it; else fall back to rename().
                           bool ok = false;
                           final provider = context.read<ProfileProvider>();
-                          // just a ref
-
-                          // If you implemented renameAndConfirm(newName)
                           ok = await provider.renameAndConfirm(newName);
-
                           if (ok) {
                             Utils.showSuccessMessage('Name updated');
                             if (ctx.mounted) Navigator.pop(ctx, true);
@@ -278,7 +266,8 @@ class AppDrawer extends StatelessWidget {
 
     final w = MediaQuery.sizeOf(context).width;
     final drawerW = w < 480 ? w * 0.85 : math.min(380.0, w * 0.5);
-
+    final status = context.watch<ProfileProvider>().state.status;
+    final isBusy = status == ProfileStatus.loading;
     Future<void> logout() async {
       Utils.showSuccessMessage('Logged out');
       if (context.mounted) {
@@ -311,17 +300,52 @@ class AppDrawer extends StatelessWidget {
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.white, width: 2),
+                    border: Border.all(color: AppTheme.primary, width: 2),
                   ),
-                  child: CircleAvatar(
-                    radius: 32,
-                    backgroundColor: AppTheme.gray.withValues(alpha: .15),
-                    backgroundImage: imageUrl.isNotEmpty
-                        ? CachedNetworkImageProvider(imageUrl)
-                        : null,
-                    child: imageUrl.isEmpty
-                        ? Text(_initials(name), style: textTheme.titleMedium)
-                        : null,
+                  child: GestureDetector(
+                    onTap: () => AvatarPickerSheet.open(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppTheme.primary, width: 2),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 32,
+                            backgroundColor: AppTheme.gray.withValues(
+                              alpha: .15,
+                            ),
+                            backgroundImage: imageUrl.isNotEmpty
+                                ? CachedNetworkImageProvider(imageUrl)
+                                : null,
+                            child: imageUrl.isEmpty
+                                ? Icon(
+                                    Icons.camera_enhance_rounded,
+                                    color: AppTheme.primary,
+                                  )
+                                : null,
+                          ),
+                          if (isBusy)
+                            Container(
+                              width: 70,
+                              height: 70,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.25),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -382,8 +406,6 @@ class AppDrawer extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                // Theme toggle (drawer only)
                 Builder(
                   builder: (ctx) {
                     final isDark = ctx.watch<SettingsProvider>().isDark;
@@ -415,9 +437,6 @@ class AppDrawer extends StatelessWidget {
               ],
             ),
           ),
-          // Google-only account (no password provider)
-
-          // logout
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),

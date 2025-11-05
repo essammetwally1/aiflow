@@ -1,22 +1,30 @@
-// lib/features/profile/presentation/provider/profile_provider.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
 import 'package:aiflow/core/domain/entities/user.dart' as domain;
 import 'package:aiflow/features/profile/domain/failures/profile_failure.dart';
 import 'package:aiflow/features/profile/domain/usecases/watch_profile.dart';
 import 'package:aiflow/features/profile/domain/usecases/rename_user.dart';
 import 'package:aiflow/features/profile/domain/usecases/change_password.dart';
 import '../controllers/profile_controller.dart';
+import '../controllers/profile_state.dart';
 
 class ProfileProvider extends ChangeNotifier {
   final WatchProfile _watch;
   final RenameUser _rename;
   final ChangePassword _changePassword;
+  final ProfileController _controller;
 
   ProfileState state = ProfileState.initial;
   StreamSubscription<domain.User?>? _sub;
 
-  ProfileProvider(this._watch, this._rename, this._changePassword);
+  ProfileProvider(
+    this._watch,
+    this._rename,
+    this._changePassword,
+    this._controller,
+  );
 
   void init() {
     _sub?.cancel();
@@ -50,7 +58,6 @@ class ProfileProvider extends ChangeNotifier {
     final prev = state.profile;
     if (prev != null && _sameName(prev.name, trimmed)) return;
 
-    // optimistic
     state = state.copyWith(
       status: ProfileStatus.loading,
       profile: prev?.copyWith(name: trimmed),
@@ -72,8 +79,6 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Call this from UI when you want to show success ONLY after the profile stream
-  /// emits the updated name. Returns true on confirmed success, false otherwise.
   Future<bool> renameAndConfirm(
     String newName, {
     Duration timeout = const Duration(seconds: 3),
@@ -81,7 +86,6 @@ class ProfileProvider extends ChangeNotifier {
     final target = newName.trim();
     if (target.isEmpty) return false;
 
-    // Listen ONCE for the updated name before firing rename(), so we don't miss it.
     final completer = Completer<bool>();
     late StreamSubscription<domain.User?> confirmSub;
 
@@ -106,9 +110,63 @@ class ProfileProvider extends ChangeNotifier {
       );
       return ok;
     } finally {
-      // Ensure subscription is cleaned up in all branches
       await confirmSub.cancel();
     }
+  }
+
+  // lib/features/profile/presentation/provider/profile_provider.dart
+  Future<String?> changeAvatarFromCamera({
+    required bool isDark,
+    void Function()? onStartedUpload, // <— NEW
+  }) async {
+    state = state.copyWith(status: ProfileStatus.loading, message: null);
+    notifyListeners();
+
+    final err = await _controller.changeAvatar(
+      ImageSource.camera,
+      isDark: isDark,
+      onStartedUpload: onStartedUpload, // <— pass through
+    );
+
+    state = state.copyWith(
+      status: err == null ? ProfileStatus.ready : ProfileStatus.error,
+      message: err,
+    );
+    notifyListeners();
+    return err;
+  }
+
+  Future<String?> changeAvatarFromGallery({
+    required bool isDark,
+    void Function()? onStartedUpload, // <— NEW
+  }) async {
+    state = state.copyWith(status: ProfileStatus.loading, message: null);
+    notifyListeners();
+
+    final err = await _controller.changeAvatar(
+      ImageSource.gallery,
+      isDark: isDark,
+      onStartedUpload: onStartedUpload, // <— pass through
+    );
+
+    state = state.copyWith(
+      status: err == null ? ProfileStatus.ready : ProfileStatus.error,
+      message: err,
+    );
+    notifyListeners();
+    return err;
+  }
+
+  Future<String?> deleteAvatar() async {
+    state = state.copyWith(status: ProfileStatus.loading, message: null);
+    notifyListeners();
+    final err = await _controller.deleteAvatar();
+    state = state.copyWith(
+      status: err == null ? ProfileStatus.ready : ProfileStatus.error,
+      message: err,
+    );
+    notifyListeners();
+    return err;
   }
 
   /// returns error message (if any); null on success
