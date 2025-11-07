@@ -24,20 +24,24 @@ Future<void> main() async {
   );
 
   // DI
-  final dataSource = FirebaseAuthDataSourceImpl();
-  final repo = AuthRepositoryImpl(dataSource);
-  final signInWithGoogle = SignInWithGoogle(repo);
+  final FirebaseAuthDataSourceImpl dataSource = FirebaseAuthDataSourceImpl();
+  final AuthRepositoryImpl repo = AuthRepositoryImpl(dataSource);
+  final SignInWithGoogle signInWithGoogle = SignInWithGoogle(repo);
 
-  final signIn = SignIn(repo);
-  final signUp = SignUp(repo);
-  final signOut = SignOut(repo);
-  final watchAuthState = WatchAuthState(repo);
-  final currentUser = CurrentUser(repo);
+  final SignIn signIn = SignIn(repo);
+  final SignUp signUp = SignUp(repo);
+  final SignOut signOut = SignOut(repo);
+  final WatchAuthState watchAuthState = WatchAuthState(repo);
+  final CurrentUser currentUser = CurrentUser(repo);
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+
+        // ChangeNotifierProvider(
+        //   create: (_) => HomeResizeProvider(ImageRepository()),
+        // ),
         ChangeNotifierProvider(
           create: (_) {
             final AuthProvider authProvider = AuthProvider(

@@ -1,3 +1,4 @@
+import 'package:aiflow/features/image/presentation/screens/screens/resize_image_screen.dart';
 import 'package:aiflow/features/profile/presentation/widgets/profile_drawer_provider.dart';
 import 'package:aiflow/features/auth/presentation/provider/auth_provider.dart';
 import 'package:aiflow/core/widgets/custom_elevated_button.dart';
@@ -58,7 +59,12 @@ class HomeScreen extends StatelessWidget {
                       Expanded(
                         child: CustomElevatedButton(
                           textElevatedButton: 'Resize Image',
-                          onPressed: () {},
+
+                          onPressed: () {
+                            Navigator.of(
+                              context,
+                            ).pushNamed(ResizeImageScreen.routeName);
+                          },
                         ),
                       ),
                     ],

@@ -333,7 +333,7 @@ class AppDrawer extends StatelessWidget {
                               width: 70,
                               height: 70,
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.25),
+                                color: Colors.black.withValues(alpha: 0.25),
                                 shape: BoxShape.circle,
                               ),
                               child: const Padding(

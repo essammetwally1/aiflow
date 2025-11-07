@@ -1,5 +1,6 @@
 import 'package:aiflow/app/app_auth_gate.dart';
 import 'package:aiflow/features/auth/presentation/screens/register_screen.dart';
+import 'package:aiflow/features/image/presentation/screens/screens/resize_image_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aiflow/core/theme/app_theme.dart';
@@ -24,6 +25,7 @@ class AiFlow extends StatelessWidget {
         LoginScreen.routeName: (_) => const LoginScreen(),
         RegisterScreen.routeName: (_) => const RegisterScreen(),
         HomeScreen.routeName: (_) => const HomeScreen(),
+        ResizeImageScreen.routeName: (_) => const ResizeImageScreen(),
       },
     );
   }
