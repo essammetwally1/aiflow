@@ -17,10 +17,11 @@ class Utils {
   static void showSuccessMessage(String message) {
     Fluttertoast.showToast(
       msg: message,
+
       toastLength: Toast.LENGTH_SHORT,
       gravity: ToastGravity.CENTER,
       timeInSecForIosWeb: 2,
-      backgroundColor: AppTheme.green,
+      backgroundColor: AppTheme.primary,
       textColor: AppTheme.white,
       fontSize: 16.0,
     );

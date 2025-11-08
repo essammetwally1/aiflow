@@ -96,7 +96,15 @@ class _ResizeImageScreenContentState extends State<_ResizeImageScreenContent> {
         appBar: AppBar(
           title: const Text('Resize Image'),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.rotationY(3.147896), // Horizontal flip
+              child: const Icon(
+                Icons.label_important_rounded,
+                size: 30,
+                color: AppTheme.primary,
+              ),
+            ),
             onPressed: () {
               homeResizeProvider.reset();
               Navigator.of(context).pop();

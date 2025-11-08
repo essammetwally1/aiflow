@@ -1,11 +1,11 @@
 import 'package:aiflow/app/app_auth_gate.dart';
 import 'package:aiflow/features/auth/presentation/screens/register_screen.dart';
+import 'package:aiflow/features/home/presentation/screens/home_screen.dart';
 import 'package:aiflow/features/image/presentation/screens/screens/resize_image_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aiflow/core/theme/app_theme.dart';
 import 'package:aiflow/shared/provider/setting_provider.dart';
-import 'package:aiflow/features/home/presentation/screens/home_screen.dart';
 import 'package:aiflow/features/auth/presentation/screens/login_screen.dart';
 
 class AiFlow extends StatelessWidget {
@@ -26,6 +26,7 @@ class AiFlow extends StatelessWidget {
         RegisterScreen.routeName: (_) => const RegisterScreen(),
         HomeScreen.routeName: (_) => const HomeScreen(),
         ResizeImageScreen.routeName: (_) => const ResizeImageScreen(),
+        // ChatScreen.routeName: (_) => const ChatScreen(),
       },
     );
   }
